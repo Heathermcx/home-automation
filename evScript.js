@@ -8,6 +8,11 @@ const energyPriceLowThreshold = 15
 const eweLinkConnection = new ewelink(config.ewelink.loginInfo)
 process.env.TZ = "Australia/Sydney"
 
+function Log(message) {
+    const now = new Date()
+    console.log(`[${now.toLocaleString()}] ${message}`)
+}
+
 const getJSON = (path, options) => fetch(path, options).then((res) => res.json())
 
 function makeAPIRequest(url, path, options) {
@@ -87,9 +92,5 @@ function SecondsToNextHalfHour() {
     return (60 * minsToHalfHour) - now.getSeconds() + 60
 }
 
-function Log(message) {
-    const now = new Date()
-    console.log(`[${now.toLocaleString()}] ${message}`)
-}
 
 ManageHouse()
