@@ -92,5 +92,4 @@ function SecondsToNextHalfHour() {
     return (60 * minsToHalfHour) - now.getSeconds() + 60
 }
 
-
 ManageHouse()
