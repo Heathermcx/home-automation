@@ -6,24 +6,25 @@ const energyPriceHighThreshold = 30
 const energyPriceLowThreshold = 15
 
 const eweLinkConnection = new ewelink(config.ewelink.loginInfo)
+process.env.TZ = "Australia/Sydney"
 
-const getJSON = (path, options) => fetch(path, options).then((res) => res.json());
+const getJSON = (path, options) => fetch(path, options).then((res) => res.json())
 
 function makeAPIRequest(url, path, options) {
-    return getJSON(`${url}/${path}`, options);
+    return getJSON(`${url}/${path}`, options)
 }
 
 async function TurnEvChargerOn() {
-    console.log("Turn EV charger on")
+    Log("Try turn EV charger on")
     //const evState = await connection.getDevicePowerState(config.ewelink.evChargerId)
-    const status = await eweLinkConnection.setDevicePowerState(config.ewelink.evChargerId, 'on');
-    console.log(status);
+    const status = await eweLinkConnection.setDevicePowerState(config.ewelink.evChargerId, 'on')
+    Log(`EV charger status: ${JSON.stringify(status)}`)
 }
 
 async function TurnEvChargerOff() {
-    console.log("Turn Ev Charger Off")
-    const status = await eweLinkConnection.setDevicePowerState(config.ewelink.evChargerId, 'off');
-    console.log(status);
+    Log("Try turn EV charger off")
+    const status = await eweLinkConnection.setDevicePowerState(config.ewelink.evChargerId, 'off')
+    Log(status)
 }
 
 async function GetCurrentAmberPrice() {
@@ -38,30 +39,57 @@ async function GetCurrentAmberPrice() {
             }
         }
     )
-    console.log(result)
     return result[0]
 }
 
-function ShouldCharge(currentEnergyState) {
+function ShouldChargeEV(currentEnergyState) {
     const price = currentEnergyState.perKwh
     const renewables = currentEnergyState.renewables
-    console.log("price " + price)
-    console.log("renewable " + renewables)
     // energy is green and cheapish
     const green = renewables > renewablesThreshold && price < energyPriceHighThreshold
-    // energy is really cheap
+    // energy is really cheap (and likely fairly green)
     const cheap = price < energyPriceLowThreshold
-    console.log("Green: " + green + " Cheap: " + cheap)
+
+    Log("price " + price)
+    Log("renewable " + renewables)
+    Log("Green: " + green + " Cheap: " + cheap)
+
     return green || cheap
 }
 
 async function ManageEVCharging() {
-    var currentEnergyState = await GetCurrentAmberPrice();
-    if (ShouldCharge(currentEnergyState)) {
-        TurnEvChargerOn();
+    var currentEnergyState = await GetCurrentAmberPrice()
+    if (ShouldChargeEV(currentEnergyState)) {
+        await TurnEvChargerOn()
     } else {
-        TurnEvChargerOff();
+        await TurnEvChargerOff()
     }
 }
 
-ManageEVCharging()
+async function ManageHouse() {
+    await ManageEVCharging()
+
+    // sleep until the next half hour
+    const delay = s => new Promise(resolve => setTimeout(resolve, s * 1000))
+    const secondsToWait = SecondsToNextHalfHour()
+    Log("Sleeping for " + secondsToWait / 60 + " minutes")
+    await delay(secondsToWait)
+
+    ManageHouse()
+}
+
+// number of seconds until 1 minute past the next half hour
+// (Energy prices update in 30 min intervals)
+function SecondsToNextHalfHour() {
+    const now = new Date()
+    var mins = now.getMinutes()
+    const minsToHalfHour = (60 - mins) % 30
+    return (60 * minsToHalfHour) - now.getSeconds() + 60
+}
+
+function Log(message) {
+    const now = new Date()
+    console.log(`[${now.toLocaleString()}] ${message}`)
+}
+
+ManageHouse()
