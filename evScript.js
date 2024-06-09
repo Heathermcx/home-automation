@@ -1,39 +1,30 @@
 const ewelink = require('ewelink-api')
 const config = require('./config.json')
 const amberUrl = "https://api.amber.com.au/v1"
+const renewablesThreshold = 50
+const energyPriceHighThreshold = 30
+const energyPriceLowThreshold = 15
 
-async function TurnEvChargerOn() {
-    const connection = new ewelink(config.ewelink.loginInfo)
-    console.log(config.ewelink.evChargerId)
-    const devices = await connection.getDevices()
-    console.log(devices)
-    const evState = await connection.getDevicePowerState(config.ewelink.evChargerId)
-
-    console.log(evState)
-
-    const status = await connection.setDevicePowerState(config.ewelink.evChargerId, 'on');
-    console.log(status);
-}
-
-// TurnEvChargerOn()
+const eweLinkConnection = new ewelink(config.ewelink.loginInfo)
 
 const getJSON = (path, options) => fetch(path, options).then((res) => res.json());
 
 function makeAPIRequest(url, path, options) {
     return getJSON(`${url}/${path}`, options);
-  }
+}
 
-//   return this.makeAPIRequest('admin/quiz/new', {
-//     method: 'POST',
-//     headers: {
-//       Authorization: `Bearer ${getLoggedInUserToken()}`,
-//       accept: 'application/json',
-//       'Content-Type': 'application/json',
-//     },
-//     body: JSON.stringify({
-//       name: quizName,
-//     }),
-//   });
+async function TurnEvChargerOn() {
+    console.log("Turn EV charger on")
+    //const evState = await connection.getDevicePowerState(config.ewelink.evChargerId)
+    const status = await eweLinkConnection.setDevicePowerState(config.ewelink.evChargerId, 'on');
+    console.log(status);
+}
+
+async function TurnEvChargerOff() {
+    console.log("Turn Ev Charger Off")
+    const status = await eweLinkConnection.setDevicePowerState(config.ewelink.evChargerId, 'off');
+    console.log(status);
+}
 
 async function GetCurrentAmberPrice() {
     const result = await makeAPIRequest(
@@ -48,7 +39,29 @@ async function GetCurrentAmberPrice() {
         }
     )
     console.log(result)
-    return result
+    return result[0]
 }
 
-GetCurrentAmberPrice()
+function ShouldCharge(currentEnergyState) {
+    const price = currentEnergyState.perKwh
+    const renewables = currentEnergyState.renewables
+    console.log("price " + price)
+    console.log("renewable " + renewables)
+    // energy is green and cheapish
+    const green = renewables > renewablesThreshold && price < energyPriceHighThreshold
+    // energy is really cheap
+    const cheap = price < energyPriceLowThreshold
+    console.log("Green: " + green + " Cheap: " + cheap)
+    return green || cheap
+}
+
+async function ManageEVCharging() {
+    var currentEnergyState = await GetCurrentAmberPrice();
+    if (ShouldCharge(currentEnergyState)) {
+        TurnEvChargerOn();
+    } else {
+        TurnEvChargerOff();
+    }
+}
+
+ManageEVCharging()
