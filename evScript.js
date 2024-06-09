@@ -16,7 +16,6 @@ function makeAPIRequest(url, path, options) {
 
 async function TurnEvChargerOn() {
     Log("Try turn EV charger on")
-    //const evState = await connection.getDevicePowerState(config.ewelink.evChargerId)
     const status = await eweLinkConnection.setDevicePowerState(config.ewelink.evChargerId, 'on')
     Log(`EV charger status: ${JSON.stringify(status)}`)
 }
@@ -24,7 +23,7 @@ async function TurnEvChargerOn() {
 async function TurnEvChargerOff() {
     Log("Try turn EV charger off")
     const status = await eweLinkConnection.setDevicePowerState(config.ewelink.evChargerId, 'off')
-    Log(status)
+    Log(`EV charger status: ${JSON.stringify(status)}`)
 }
 
 async function GetCurrentAmberPrice() {
@@ -50,14 +49,15 @@ function ShouldChargeEV(currentEnergyState) {
     // energy is really cheap (and likely fairly green)
     const cheap = price < energyPriceLowThreshold
 
-    Log("price " + price)
-    Log("renewable " + renewables)
-    Log("Green: " + green + " Cheap: " + cheap)
+    Log(`Current energy price: ${price}`)
+    Log(`Current renewables: ${renewables}%`)
+    Log(`Green: ${green}, Cheap: ${cheap}`)
 
     return green || cheap
 }
 
 async function ManageEVCharging() {
+    Log("Manage EV charging")
     var currentEnergyState = await GetCurrentAmberPrice()
     if (ShouldChargeEV(currentEnergyState)) {
         await TurnEvChargerOn()
@@ -67,19 +67,19 @@ async function ManageEVCharging() {
 }
 
 async function ManageHouse() {
+    Log("Begin ManageHouse")
     await ManageEVCharging()
 
     // sleep until the next half hour
     const delay = s => new Promise(resolve => setTimeout(resolve, s * 1000))
     const secondsToWait = SecondsToNextHalfHour()
-    Log("Sleeping for " + secondsToWait / 60 + " minutes")
+    Log(`Sleeping for ${secondsToWait / 60} minutes`)
     await delay(secondsToWait)
 
     ManageHouse()
 }
 
 // number of seconds until 1 minute past the next half hour
-// (Energy prices update in 30 min intervals)
 function SecondsToNextHalfHour() {
     const now = new Date()
     var mins = now.getMinutes()
