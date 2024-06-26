@@ -6,7 +6,6 @@ const energyPriceHighThreshold = 30
 const energyPriceLowThreshold = 15
 
 const eweLinkConnection = new ewelink(config.ewelink.loginInfo)
-process.env.TZ = "Australia/Sydney"
 
 function Log(message) {
     const now = new Date()
