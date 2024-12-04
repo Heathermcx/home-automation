@@ -2,8 +2,8 @@ const ewelink = require('ewelink-api')
 const config = require('./config.json')
 const amberUrl = "https://api.amber.com.au/v1"
 const renewablesThreshold = 50
-const energyPriceHighThreshold = 30
-const energyPriceLowThreshold = 15
+const energyPriceHighThreshold = 20
+const energyPriceLowThreshold = 13
 
 const eweLinkConnection = new ewelink(config.ewelink.loginInfo)
 
